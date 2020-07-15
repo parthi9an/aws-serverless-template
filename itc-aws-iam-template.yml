@@ -1,0 +1,100 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation iam'
+
+Parameters:
+  Password:
+    NoEcho: 'true'
+    Type: String
+    Description: New account password
+    MinLength: '1'
+    MaxLength: '41'
+    ConstraintDescription: the password must be between 1 and 41 characters
+Resources:
+  ITCUser:
+    Type: AWS::IAM::User
+    Properties:
+      LoginProfile:
+        Password: !Ref 'Password'
+      UserName: 'ITCRole'
+  ITCUserGroup:
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: 'ITCUserGroup'
+  ITCAdminGroup:
+    Type: AWS::IAM::Group
+    Properties: 
+      GroupName: 'ITCAdminGroup'
+  Users:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref 'ITCUserGroup'
+      Users: [!Ref 'ITCUser']
+  Admins:
+    Type: AWS::IAM::UserToGroupAddition
+    Properties:
+      GroupName: !Ref 'ITCAdminGroup'
+      Users: [!Ref 'ITCUser']
+  ITCUserPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ITCUsers
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: ['cloudformation:Describe*', 'cloudformation:List*', 'cloudformation:Get*', 'apigateway:*', 's3:*', 'dynamodb:*']
+          Resource: '*'
+      Groups: [!Ref 'ITCUserGroup']
+  ITCAdminPolicies:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: ITCAdmins
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action: ['cloudformation:*', 'apigateway:*', 's3:*', 'dynamodb:*']
+          Resource: '*'
+      Groups: [!Ref 'ITCAdminGroup']
+  ITCKeys:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      UserName: !Ref 'ITCUser'
+  
+  ITCRole: 
+    Type: "AWS::IAM::Role"
+    Properties: 
+      RoleName: 'ITCRole'
+      AssumeRolePolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Principal: 
+              Service: 
+                - "lambda.amazonaws.com"
+                - "apigateway.amazonaws.com"
+            Action: 
+              - "sts:AssumeRole"
+      Path: "/"
+  ITCRolePolicies: 
+    Type: "AWS::IAM::Policy"
+    Properties: 
+      PolicyName: "itc"
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Effect: "Allow"
+            Action: ['execute-api:*', 'logs:*', 'lambda:*', 'dynamodb:*' ]
+            Resource: "*"
+      Roles: 
+        - 
+          Ref: "ITCRole"
+  
+Outputs:
+  AccessKey:
+    Value: !Ref 'ITCKeys'
+    Description: AWSAccessKeyId of new user
+  SecretKey:
+    Value: !GetAtt [ITCKeys, SecretAccessKey]
+    Description: AWSSecretAccessKey of new user

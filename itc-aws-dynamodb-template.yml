@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+## --- Create DynomaDB --- #
+
+  Announcements:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      AttributeDefinitions:
+        -
+          AttributeName: "AnnouncementId"
+          AttributeType: "N"
+        -
+          AttributeName: "Title"
+          AttributeType: "S"
+       
+        -
+          AttributeName: "Date"
+          AttributeType: "S"
+      KeySchema:
+       
+        -
+          AttributeName: "AnnouncementId"
+          KeyType: "HASH"
+        -
+          AttributeName: "Date" 
+          KeyType: "RANGE" 
+          
+      TableName: "Announcements"
+      
+      GlobalSecondaryIndexes:
+        -
+          IndexName: "GSI"
+          KeySchema:
+            -
+              AttributeName: "Title"
+              KeyType: "HASH"
+            -
+              AttributeName: "Date" 
+              KeyType: "RANGE" 
+          Projection:
+            ProjectionType: "ALL"
+          ProvisionedThroughput:
+            ReadCapacityUnits: 5
+            WriteCapacityUnits: 5
+               
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+        
+  WriteCapacityScalableTarget:
+    Type: AWS::ApplicationAutoScaling::ScalableTarget
+    Properties:
+      MaxCapacity: 15
+      MinCapacity: 5
+      ResourceId: !Join
+        - /
+        - - table
+          - !Ref Announcements
+      RoleARN: !GetAtt ScalingRole.Arn
+      ScalableDimension: dynamodb:table:WriteCapacityUnits
+      ServiceNamespace: dynamodb
+  ScalingRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: 'ITCScalingRole'
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - application-autoscaling.amazonaws.com
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        -
+          PolicyName: "itcscaling"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              -
+                Effect: "Allow"
+                Action:
+                  - "dynamodb:*"
+                  - "cloudwatch:*"
+                Resource: "*"
+                
+  WriteScalingPolicy:
+    Type: AWS::ApplicationAutoScaling::ScalingPolicy
+    Properties:
+      PolicyName: WriteAutoScalingPolicy
+      PolicyType: TargetTrackingScaling
+      ScalingTargetId: !Ref WriteCapacityScalableTarget
+      TargetTrackingScalingPolicyConfiguration:
+        TargetValue: 50.0
+        ScaleInCooldown: 60
+        ScaleOutCooldown: 60
+        PredefinedMetricSpecification:
+          PredefinedMetricType: DynamoDBWriteCapacityUtilization

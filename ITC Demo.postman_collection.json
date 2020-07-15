@@ -1,0 +1,63 @@
+{
+	"variables": [],
+	"info": {
+		"name": "ITC Demo",
+		"_postman_id": "74c0e004-ce96-3a98-65fd-6e277a86d529",
+		"description": "",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "List announcement",
+			"request": {
+				"url": "https://{ApiId}.execute-api.{aws-region}.amazonaws.com/Dev/announcements",
+				"method": "GET",
+				"header": [],
+				"body": {},
+				"description": ""
+			},
+			"response": []
+		},
+		{
+			"name": "Create announcement",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"var jsonData = JSON.parse(responseBody);",
+							"tests[\"Your test name\"] = jsonData.value === 100;",
+							"",
+							"",
+							"tests[\"Status code is 200\"] = responseCode.code === 200;",
+							"",
+							"tests[\"Successful POST request\"] = responseCode.code === 201 || responseCode.code === 202;",
+							"",
+							"tests[\"Content-Type is present\"] = postman.getResponseHeader(\"Content-Type\");",
+							"",
+							""
+						]
+					}
+				}
+			],
+			"request": {
+				"url": "https://{ApiId}.execute-api.{aws-region}.amazonaws.com/Dev/announcements",
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"description": ""
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "\n{\"id\" : \"103\", \"title\" : \"CDE\", \"description\": \"CDE description\", \"date\": \"06-03-2020\" }"
+				},
+				"description": ""
+			},
+			"response": []
+		}
+	]
+}

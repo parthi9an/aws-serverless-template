@@ -1,0 +1,205 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Resources:
+## --- Create DynomaDB --- #
+
+## ---- Create Announcement --- #  
+  CreateAnnouncement:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: 'itc-lambda'
+        S3Key: 'lambda.zip'
+      Description: 'itc-aws-serverless-cfn-template'
+      MemorySize: '128'
+      Handler: lambda.create_announcement
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/ITCRole'
+      Timeout: '30'
+      Runtime: 'python3.8'
+  
+  CreateAnnouncementApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: CreateAnnouncement
+      Body:
+        openapi: "3.0.1"
+        info:
+          version: '1.0'
+          title: !Ref 'AWS::StackName'
+        paths:
+          /announcements:
+            post:
+              consumes:
+                - application/json
+              produces:
+                - application/json
+              requestBody:
+                required: true
+                content:
+                  application/json:
+                    schema:
+                      type: object 
+                      required:
+                        - id
+                        - title
+                        - descrption
+                        - date
+                      properties:
+                        id:
+                          type: string
+                        title:
+                          type: string
+                        descrption:
+                          type: string
+                        date:
+                          type: string
+              responses:
+                '200':
+                  description: 200 response
+                  headers:
+                    Content-Type:
+                      type: string
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/ITCRole'
+                type: aws
+                uri: !Sub >-
+                  arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateAnnouncement.Arn}/invocations
+                responses: {
+                  "default": {
+                    "statusCode": "200",
+                    "responseTemplates": {
+                      application/json: ""
+                    }
+                  }
+                }
+                passthroughBehavior: "when_no_templates"
+        
+  CreateAnnouncementPermissionDev:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref CreateAnnouncement
+      SourceArn: !Sub
+        - >-
+          arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${__ApiId__}/${__Stage__}/POST/announcements
+        - __Stage__: Dev
+          __ApiId__: !Ref CreateAnnouncementApi
+          
+  CreateAnnouncementApiDevStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      DeploymentId: !Ref CreateAnnouncementApiDeployment00
+      RestApiId: !Ref CreateAnnouncementApi
+      StageName: Dev
+      
+  CreateAnnouncementApiDeployment00:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref CreateAnnouncementApi
+      Description: 'RestApi deployment id: 00'
+      StageName: Stage
+      
+## ---- List Announcement --- #  
+  ListAnnouncements:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: 'itc-lambda'
+        S3Key: 'lambda.zip'
+      Description: 'aws-serverless-cfn-template'
+      MemorySize: '128'
+      Handler: lambda.list_announcements
+      Role: !Sub 'arn:aws:iam::${AWS::AccountId}:role/ITCRole'
+      Timeout: '30'
+      Runtime: 'python3.8'
+      
+  ListAnnouncementsApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: ListAnnouncements
+      Body:
+        openapi: "3.0.1"
+        info:
+          version: '1.0'
+          title: !Ref 'AWS::StackName'
+        paths:
+          /announcements:
+            get:
+              parameters:
+                - name: limit
+                  in: query
+                  description: Limits the number of items on a page
+                  schema:
+                    type: integer
+                - name: offset
+                  in: query
+                  description: Specifies the page number of the artists to be displayed
+                  schema:
+                    type: integer
+              produces:
+                - application/json
+              responses:
+                '200':
+                  description: 200 response
+                  headers:
+                    Content-Type:
+                      type: string
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                credentials: !Sub 'arn:aws:iam::${AWS::AccountId}:role/ITCRole'
+                type: aws
+                uri: !Sub >-
+                  arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListAnnouncements.Arn}/invocations
+                responses: {
+                  "default": {
+                    "statusCode": "200",
+                    "responseTemplates": {
+                      application/json: ""
+                    }
+                  }
+                }
+                passthroughBehavior: "when_no_templates"
+                      
+  ListAnnouncementsPermissionDev:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref ListAnnouncements
+      SourceArn: !Sub
+        - >-
+          arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${__ApiId__}/${__Stage__}/GET/announcements
+        - __Stage__: Dev
+          __ApiId__: !Ref ListAnnouncementsApi
+          
+  ListAnnouncementsApiDevStage:
+    Type: 'AWS::ApiGateway::Stage'
+    Properties:
+      DeploymentId: !Ref ListAnnouncementsApiDeployment00
+      RestApiId: !Ref ListAnnouncementsApi
+      StageName: Dev
+      
+  ListAnnouncementsApiDeployment00:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref ListAnnouncementsApi
+      Description: 'RestApi deployment id: 00'
+      StageName: Stage
+  
+  ListAnnouncementsApiPermissionTest:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      Action: 'lambda:invokeFunction'
+      Principal: apigateway.amazonaws.com
+      FunctionName: !Ref ListAnnouncements
+      SourceArn: !Sub
+        - >-
+          arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${__ApiId__}/${__Stage__}/GET/announcements
+        - __Stage__: '*'
+          __ApiId__: !Ref ListAnnouncementsApi
+Outputs:
+ TestURL:
+  Description: Test your serverless app with this url in a browser.
+  Value: !Join [ "", [ "https://", !Ref "ListAnnouncementsApi", ".execute-api.", !Sub "${AWS::Region}", ".amazonaws.com/Dev/announcements"]]
